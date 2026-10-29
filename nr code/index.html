@@ -1,0 +1,359 @@
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chicken Idle 🐔</title>
+
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    color: #47321f;
+    text-align: center;
+    background: linear-gradient(#a8e6a1, #fff0b8);
+    min-height: 100vh;
+  }
+
+  header {
+    padding: 24px 12px;
+    background: #66bb6a;
+    color: white;
+  }
+
+  h1 { margin: 0 0 8px; font-size: 32px; }
+
+  .stats {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 22px 12px;
+  }
+
+  .stat {
+    background: white;
+    padding: 14px 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 0 #d7c69a;
+    min-width: 130px;
+  }
+
+  .stat strong {
+    display: block;
+    font-size: 24px;
+    margin-top: 5px;
+  }
+
+  .farm {
+    margin: 20px auto;
+    padding: 25px 12px;
+    max-width: 650px;
+    background: #fff9e7;
+    border: 4px solid #d8b77b;
+    border-radius: 25px;
+  }
+
+  #chicken {
+    border: none;
+    background: transparent;
+    font-size: 115px;
+    cursor: pointer;
+    transition: transform 0.12s;
+    user-select: none;
+  }
+
+  #chicken:hover { transform: scale(1.08); }
+  #chicken:active { transform: scale(0.88); }
+
+  .shop {
+    max-width: 650px;
+    margin: 20px auto;
+    padding: 18px;
+  }
+
+  .upgrade {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    margin: 12px 0;
+    padding: 16px;
+    border-radius: 15px;
+    text-align: left;
+    box-shadow: 0 3px 0 #d7c69a;
+  }
+
+  .upgrade p { margin: 6px 0 0; color: #78654f; }
+
+  button.buy {
+    background: #ffb74d;
+    color: #573719;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-weight: bold;
+    cursor: pointer;
+    min-width: 110px;
+  }
+
+  button.buy:hover { background: #ffa726; }
+  button.buy:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  #message {
+    min-height: 25px;
+    color: #388e3c;
+    font-weight: bold;
+  }
+
+  .reset {
+    background: #e57373;
+    color: white;
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin: 20px;
+    cursor: pointer;
+  }
+
+  footer { padding: 20px; }
+
+  @media (max-width: 420px) {
+    .upgrade { padding: 12px; }
+    .upgrade h3 { font-size: 15px; }
+    button.buy { min-width: 95px; padding: 10px 7px; }
+  }
+</style>
+</head>
+
+<body>
+<header>
+  <h1>🐔 Chicken Idle</h1>
+  <div>Build the biggest chicken farm!</div>
+</header>
+
+<div class="stats">
+  <div class="stat">🥚 Eggs<strong id="eggs">0</strong></div>
+  <div class="stat">🐔 Chickens<strong id="chickens">1</strong></div>
+  <div class="stat">⚡ Eggs / second<strong id="rate">0</strong></div>
+</div>
+
+<section class="farm">
+  <h2>Your Farm 🌾</h2>
+  <button id="chicken" aria-label="Tap chicken to collect eggs">🐔</button>
+  <p>Tap your chicken to collect eggs!</p>
+  <div id="message">Your farm adventure begins!</div>
+  <p>🥚 Total eggs collected: <span id="total">0</span></p>
+</section>
+
+<section class="shop">
+  <h2>🏪 Farm Shop</h2>
+
+  <div class="upgrade">
+    <div>
+      <h3>🐣 Buy a Chicken</h3>
+      <p>Produces 1 egg per second</p>
+      <p>Owned: <span id="owned">1</span></p>
+    </div>
+    <button class="buy" id="buyChicken">Buy: 10 🥚</button>
+  </div>
+
+  <div class="upgrade">
+    <div>
+      <h3>🌽 Better Feed</h3>
+      <p>Each chicken produces +1 egg/sec</p>
+      <p>Level: <span id="feedLevel">0</span></p>
+    </div>
+    <button class="buy" id="buyFeed">Buy: 50 🥚</button>
+  </div>
+
+  <div class="upgrade">
+    <div>
+      <h3>🏡 Bigger Coop</h3>
+      <p>Earn 2x eggs from tapping</p>
+      <p>Level: <span id="coopLevel">0</span></p>
+    </div>
+    <button class="buy" id="buyCoop">Buy: 100 🥚</button>
+  </div>
+</section>
+
+<button class="reset" id="reset">Reset Game</button>
+
+<footer>🥚 Keep growing your egg empire! 🐔</footer>
+
+<script>
+  const initialState = {
+    eggs: 0,
+    chickens: 1,
+    feed: 0,
+    coop: 0,
+    total: 0,
+    chickenCost: 10,
+    feedCost: 50,
+    coopCost: 100
+  };
+
+  let game = { ...initialState };
+  let messageTimeout;
+
+  function production() {
+    return game.chickens * (1 + game.feed);
+  }
+
+  function tapPower() {
+    return 1 + game.coop;
+  }
+
+  function earn(amount) {
+    game.eggs += amount;
+    game.total += amount;
+    render();
+  }
+
+  function say(text) {
+    document.getElementById("message").textContent = text;
+    clearTimeout(messageTimeout);
+    messageTimeout = setTimeout(() => {
+      document.getElementById("message").textContent =
+        "Your chickens are hard at work!";
+    }, 2500);
+  }
+
+  function render() {
+    document.getElementById("eggs").textContent =
+      Math.floor(game.eggs).toLocaleString();
+
+    document.getElementById("chickens").textContent =
+      game.chickens.toLocaleString();
+
+    document.getElementById("rate").textContent =
+      production().toLocaleString();
+
+    document.getElementById("total").textContent =
+      Math.floor(game.total).toLocaleString();
+
+    document.getElementById("owned").textContent = game.chickens;
+    document.getElementById("feedLevel").textContent = game.feed;
+    document.getElementById("coopLevel").textContent = game.coop;
+
+    document.getElementById("buyChicken").textContent =
+      `Buy: ${game.chickenCost.toLocaleString()} 🥚`;
+
+    document.getElementById("buyFeed").textContent =
+      `Buy: ${game.feedCost.toLocaleString()} 🥚`;
+
+    document.getElementById("buyCoop").textContent =
+      `Buy: ${game.coopCost.toLocaleString()} 🥚`;
+
+    document.getElementById("buyChicken").disabled =
+      game.eggs < game.chickenCost;
+
+    document.getElementById("buyFeed").disabled =
+      game.eggs < game.feedCost;
+
+    document.getElementById("buyCoop").disabled =
+      game.eggs < game.coopCost;
+  }
+
+  document.getElementById("chicken").addEventListener("click", () => {
+    earn(tapPower());
+    say(`+${tapPower()} eggs! 🥚`);
+  });
+
+  document.getElementById("buyChicken").addEventListener("click", () => {
+    if (game.eggs < game.chickenCost) return;
+
+    game.eggs -= game.chickenCost;
+    game.chickens++;
+    game.chickenCost = Math.ceil(game.chickenCost * 1.5);
+
+    say("A new chicken joined your farm! 🐣");
+    render();
+    save();
+  });
+
+  document.getElementById("buyFeed").addEventListener("click", () => {
+    if (game.eggs < game.feedCost) return;
+
+    game.eggs -= game.feedCost;
+    game.feed++;
+    game.feedCost = Math.ceil(game.feedCost * 2);
+
+    say("Your chickens are eating better! 🌽");
+    render();
+    save();
+  });
+
+  document.getElementById("buyCoop").addEventListener("click", () => {
+    if (game.eggs < game.coopCost) return;
+
+    game.eggs -= game.coopCost;
+    game.coop++;
+    game.coopCost = Math.ceil(game.coopCost * 2.5);
+
+    say("Your tapping power increased! 🏡");
+    render();
+    save();
+  });
+
+  function save() {
+    try {
+      localStorage.setItem("chickenIdleSave", JSON.stringify(game));
+    } catch (error) {
+      console.warn("Could not save game.", error);
+    }
+  }
+
+  function load() {
+    try {
+      const saved = localStorage.getItem("chickenIdleSave");
+      if (!saved) return;
+
+      const parsed = JSON.parse(saved);
+      const keys = Object.keys(initialState);
+
+      for (const key of keys) {
+        if (
+          typeof parsed[key] === "number" &&
+          Number.isFinite(parsed[key]) &&
+          parsed[key] >= 0
+        ) {
+          game[key] = parsed[key];
+        }
+      }
+
+      game.chickens = Math.max(1, Math.floor(game.chickens));
+      game.feed = Math.floor(game.feed);
+      game.coop = Math.floor(game.coop);
+    } catch (error) {
+      console.warn("Could not load saved game.", error);
+    }
+  }
+
+  document.getElementById("reset").addEventListener("click", () => {
+    if (!confirm("Reset your entire farm? This cannot be undone.")) return;
+
+    game = { ...initialState };
+    save();
+    render();
+    say("A fresh farm awaits! 🐣");
+  });
+
+  load();
+  render();
+
+  // Automatic egg production
+  setInterval(() => {
+    earn(production());
+    save();
+  }, 1000);
+
+  // Save periodically, even if the player is not buying upgrades
+  setInterval(save, 5000);
+
+  window.addEventListener("beforeunload", save);
+</script>
+</body>
+</html>
