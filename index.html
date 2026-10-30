@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chicken Idle 🐔</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header>
+    <h1>🐔 Chicken Idle</h1>
+    <div>Build the biggest chicken farm!</div>
+  </header>
+
+  <div class="stats">
+    <div class="stat">🥚 Eggs<strong id="eggs">0</strong></div>
+    <div class="stat">🐔 Chickens<strong id="chickens">1</strong></div>
+    <div class="stat">⚡ Eggs / second<strong id="rate">0</strong></div>
+  </div>
+
+  <section class="farm">
+    <h2>Your Farm 🌾</h2>
+    <button id="chicken" aria-label="Tap chicken to collect eggs">🐔</button>
+    <p>Tap your chicken to collect eggs!</p>
+    <div id="message">Your farm adventure begins!</div>
+    <p>🥚 Total eggs collected: <span id="total">0</span></p>
+  </section>
+
+  <section class="shop">
+    <h2>🏪 Farm Shop</h2>
+
+    <div class="upgrade">
+      <div>
+        <h3>🐣 Buy a Chicken</h3>
+        <p>Produces 1 egg per second</p>
+        <p>Owned: <span id="owned">1</span></p>
+      </div>
+      <button class="buy" id="buyChicken">Buy: 10 🥚</button>
+    </div>
+
+    <div class="upgrade">
+      <div>
+        <h3>🌽 Better Feed</h3>
+        <p>Each chicken produces +1 egg/sec</p>
+        <p>Level: <span id="feedLevel">0</span></p>
+      </div>
+      <button class="buy" id="buyFeed">Buy: 50 🥚</button>
+    </div>
+
+    <div class="upgrade">
+      <div>
+        <h3>🏡 Bigger Coop</h3>
+        <p>Earn 2x eggs from tapping</p>
+        <p>Level: <span id="coopLevel">0</span></p>
+      </div>
+      <button class="buy" id="buyCoop">Buy: 100 🥚</button>
+    </div>
+  </section>
+
+  <button class="reset" id="reset">Reset Game</button>
+
+  <footer>🥚 Keep growing your egg empire! 🐔</footer>
+
+  <script>
+    const initialState = {
+      eggs: 0,
+      chickens: 1,
+      feed: 0,
+      coop: 0,
+      total: 0,
+      chickenCost: 10,
+      feedCost: 50,
+      coopCost: 100
+    };
+
+    let game = { ...initialState };
+    let messageTimeout;
+
+    function production() {
+      return game.chickens * (1 + game.feed);
+    }
+
+    function tapPower() {
+      return 1 + game.coop;
+    }
+
+    function earn(amount) {
+      game.eggs += amount;
+      game.total += amount;
+      render();
+    }
+
+    function say(text) {
+      document.getElementById("message").textContent = text;
+      clearTimeout(messageTimeout);
+      messageTimeout = setTimeout(() => {
+        document.getElementById("message").textContent = "Your chickens are hard at work!";
+      }, 2500);
+    }
+
+    function render() {
+      document.getElementById("eggs").textContent = Math.floor(game.eggs).toLocaleString();
+      document.getElementById("chickens").textContent = game.chickens.toLocaleString();
+      document.getElementById("rate").textContent = production().toLocaleString();
+      document.getElementById("total").textContent = Math.floor(game.total).toLocaleString();
+
+      document.getElementById("owned").textContent = game.chickens;
+      document.getElementById("feedLevel").textContent = game.feed;
+      document.getElementById("coopLevel").textContent = game.coop;
+
+      document.getElementById("buyChicken").textContent = `Buy: ${game.chickenCost.toLocaleString()} 🥚`;
+      document.getElementById("buyFeed").textContent = `Buy: ${game.feedCost.toLocaleString()} 🥚`;
+      document.getElementById("buyCoop").textContent = `Buy: ${game.coopCost.toLocaleString()} 🥚`;
+
+      document.getElementById("buyChicken").disabled = game.eggs < game.chickenCost;
+      document.getElementById("buyFeed").disabled = game.eggs < game.feedCost;
+      document.getElementById("buyCoop").disabled = game.eggs < game.coopCost;
+    }
+
+    document.getElementById("chicken").addEventListener("click", () => {
+      earn(tapPower());
+      say(`+${tapPower()} eggs! 🥚`);
+    });
+
+    document.getElementById("buyChicken").addEventListener("click", () => {
+      if (game.eggs < game.chickenCost) return;
+
+      game.eggs -= game.chickenCost;
+      game.chickens++;
+      game.chickenCost = Math.ceil(game.chickenCost * 1.5);
+
+      say("A new chicken joined your farm! 🐣");
+      render();
+      save();
+    });
+
+    document.getElementById("buyFeed").addEventListener("click", () => {
+      if (game.eggs < game.feedCost) return;
+
+      game.eggs -= game.feedCost;
+      game.feed++;
+      game.feedCost = Math.ceil(game.feedCost * 2);
+
+      say("Your chickens are eating better! 🌽");
+      render();
+      save();
+    });
+
+    document.getElementById("buyCoop").addEventListener("click", () => {
+      if (game.eggs < game.coopCost) return;
+
+      game.eggs -= game.coopCost;
+      game.coop++;
+      game.coopCost = Math.ceil(game.coopCost * 2.5);
+
+      say("Your tapping power increased! 🏡");
+      render();
+      save();
+    });
+
+    function save() {
+      try {
+        localStorage.setItem("chickenIdleSave", JSON.stringify(game));
+      } catch (error) {
+        console.warn("Could not save game.", error);
+      }
+    }
+
+    function load() {
+      try {
+        const saved = localStorage.getItem("chickenIdleSave");
+        if (!saved) return;
+
+        const parsed = JSON.parse(saved);
+        const keys = Object.keys(initialState);
+
+        for (const key of keys) {
+          if (
+            typeof parsed[key] === "number" &&
+            Number.isFinite(parsed[key]) &&
+            parsed[key] >= 0
+          ) {
+            game[key] = parsed[key];
+          }
+        }
+
+        game.chickens = Math.max(1, Math.floor(game.chickens));
+        game.feed = Math.floor(game.feed);
+        game.coop = Math.floor(game.coop);
+      } catch (error) {
+        console.warn("Could not load saved game.", error);
+      }
+    }
+
+    document.getElementById("reset").addEventListener("click", () => {
+      if (!confirm("Reset your entire farm? This cannot be undone.")) return;
+
+      game = { ...initialState };
+      save();
+      render();
+      say("A fresh farm awaits! 🐣");
+    });
+
+    load();
+    render();
+
+    setInterval(() => {
+      earn(production());
+      save();
+    }, 1000);
+
+    setInterval(save, 5000);
+    window.addEventListener("beforeunload", save);
+  </script>
+</body>
+</html>

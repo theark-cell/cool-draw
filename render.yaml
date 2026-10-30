@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: cool-draw
+    env: static
+    buildCommand: ""
+    staticPublishPath: .
