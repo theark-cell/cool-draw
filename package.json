@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "echo \"Static site: no build required\"",
-    "start": "npx http-server . -p ${PORT:-3000}"
+    "start": "python3 -m http.server ${PORT:-3000} --directory ."
   }
 }
